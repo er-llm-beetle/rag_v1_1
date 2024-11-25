@@ -4504,6 +4504,7 @@ def initialize_rag_pipeline():
         # Initialize pipeline with caching enabled
         pipeline = RAGPipeline(
             collection_name="azerbaijan_docs",
+            embedding_model="text-embedding-3-small",  # OpenAI model
             chunk_size=1024,
             chunk_overlap=128,
             language="az",
