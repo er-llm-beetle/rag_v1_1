@@ -3741,10 +3741,13 @@ class RAGPipeline:
             #     # use_disk_cache=True
             # )
 
+            OPENAI_API_KEY = st.secrets['OPENAI_API_KEY']
+
             self.embedding_model = GPTEmbeddingModel(
                 model_name=embedding_model,
                 device=device,
-                api_key=os.environ.get('OPENAI_API_KEY'),
+                # api_key=os.environ.get('OPENAI_API_KEY'),
+                api_key=OPENAI_API_KEY
 
                 # cache_dir=cache_dir,
                 # memory_cache_size=10000,
