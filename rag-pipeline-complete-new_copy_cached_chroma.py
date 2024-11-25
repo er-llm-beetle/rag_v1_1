@@ -3858,138 +3858,231 @@ class ResourceManager:
 class RAGPipeline:
     """Main RAG Pipeline class that orchestrates all components"""
     
-    def __init__(
-        self,
-        collection_name: str = "azerbaijan_docs",
-        chunk_size: int = 512, # 1024
-        chunk_overlap: int = 50, # 128
-        # embedding_model: str = "BAAI/bge-m3", # Local model
-        # embedding_model: str = "LocalDoc/TEmA-small", # Local model
-        embedding_model="text-embedding-3-small",  # OpenAI model
-        host: str = "localhost",
-        port: int = 19530,
-        language: str = "az",
-        device: str = None,
-        batch_size: int = 4,
-        # cache_dir: str = "embeddings_cache",  # New parameter
-        cache_dir: str = "cache"  # Add this parameter
+#     def __init__(
+#         self,
+#         collection_name: str = "azerbaijan_docs",
+#         chunk_size: int = 512, # 1024
+#         chunk_overlap: int = 50, # 128
+#         # embedding_model: str = "BAAI/bge-m3", # Local model
+#         # embedding_model: str = "LocalDoc/TEmA-small", # Local model
+#         embedding_model="text-embedding-3-small",  # OpenAI model
+#         host: str = "localhost",
+#         port: int = 19530,
+#         language: str = "az",
+#         device: str = None,
+#         batch_size: int = 4,
+#         # cache_dir: str = "embeddings_cache",  # New parameter
+#         cache_dir: str = "cache"  # Add this parameter
 
-        ):
+#         ):
         
-        """Initialize the RAG Pipeline with all components"""
+#         """Initialize the RAG Pipeline with all components"""
         
-        # atexit.register(ResourceManager.cleanup)
-        ResourceManager.initialize()
+#         # atexit.register(ResourceManager.cleanup)
+#         ResourceManager.initialize()
 
-        # Set environment variables to suppress warnings
-        os.environ['PYTHONWARNINGS'] = 'ignore::UserWarning:resource_tracker'
-        # Set memory constraints
-        os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb=512'
+#         # Set environment variables to suppress warnings
+#         os.environ['PYTHONWARNINGS'] = 'ignore::UserWarning:resource_tracker'
+#         # Set memory constraints
+#         os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb=512'
 
-       # Initialize components with proper resource handling
-        if torch.cuda.is_available():
-            # Use spawn method for CUDA tensors
-            torch_mp.set_start_method('spawn', force=True)
+#        # Initialize components with proper resource handling
+#         if torch.cuda.is_available():
+#             # Use spawn method for CUDA tensors
+#             torch_mp.set_start_method('spawn', force=True)
 
 
 
-        logger.info("Initializing pipeline components...")
+#         logger.info("Initializing pipeline components...")
 
-        try: 
-            """Initialize pipeline with memory optimization"""
+#         try: 
+#             """Initialize pipeline with memory optimization"""
 
-            self.logger = logging.getLogger(__name__)
+#             self.logger = logging.getLogger(__name__)
 
-            self.batch_size = batch_size
-            self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+#             self.batch_size = batch_size
+#             self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
 
-            self.language = language
+#             self.language = language
             
-# cache
-            self.cache_dir = Path(cache_dir)
-            self.cache_dir.mkdir(parents=True, exist_ok=True)
-# 
+# # cache
+#             self.cache_dir = Path(cache_dir)
+#             self.cache_dir.mkdir(parents=True, exist_ok=True)
+# # 
     
-            # Initialize components
-            self.doc_processor = DocumentProcessor()
-            self.chunking_strategy = ChunkingStrategy(
-                chunk_size=chunk_size,
-                chunk_overlap=chunk_overlap
-            )
+#             # Initialize components
+#             self.doc_processor = DocumentProcessor()
+#             self.chunking_strategy = ChunkingStrategy(
+#                 chunk_size=chunk_size,
+#                 chunk_overlap=chunk_overlap
+#             )
 
-# cache
-            # Initialize chunk cache
-            self.chunk_cache = ChunkCache(cache_dir=f"{cache_dir}/chunks")
-# 
+# # cache
+#             # Initialize chunk cache
+#             self.chunk_cache = ChunkCache(cache_dir=f"{cache_dir}/chunks")
+# # 
 
-            logger.info("Loading embedding model...")
+#             logger.info("Loading embedding model...")
 
-            # self.embedding_model = EmbeddingModel(embedding_model, device=self.device) # local embeddings
-# 
-            # Initialize embedding model with caching
-            # self.embedding_model = CachedEmbeddingModel(
-            #     model_name=embedding_model,
-            #     device=device,
-            #     cache_dir=cache_dir,
-            #     # memory_cache_size=10000,
-            #     # use_disk_cache=True
-            # )
+#             # self.embedding_model = EmbeddingModel(embedding_model, device=self.device) # local embeddings
+# # 
+#             # Initialize embedding model with caching
+#             # self.embedding_model = CachedEmbeddingModel(
+#             #     model_name=embedding_model,
+#             #     device=device,
+#             #     cache_dir=cache_dir,
+#             #     # memory_cache_size=10000,
+#             #     # use_disk_cache=True
+#             # )
 
-            OPENAI_API_KEY = st.secrets['OPENAI_API_KEY']
+#             OPENAI_API_KEY = st.secrets['OPENAI_API_KEY']
 
-            self.embedding_model = GPTEmbeddingModel(
-                model_name=embedding_model,
-                device=device,
-                # api_key=os.environ.get('OPENAI_API_KEY'),
-                api_key=OPENAI_API_KEY
+#             self.embedding_model = GPTEmbeddingModel(
+#                 model_name=embedding_model,
+#                 device=device,
+#                 # api_key=os.environ.get('OPENAI_API_KEY'),
+#                 api_key=OPENAI_API_KEY
 
-                # cache_dir=cache_dir,
-                # memory_cache_size=10000,
-                # use_disk_cache=True
-            )
-# 
-
-
-            logger.info("Initializing vector store...")
-# milvus
-            # self.vector_store = MilvusVectorStore(
-            #     collection_name=collection_name,
-            #     host=host,
-            #     port=port,
-            #     embedding_dim=self.embedding_model.dimension
-            # )
-# 
-
-# chromadb
-            self.vector_store = ChromaDBVectorStore(
-                collection_name=collection_name,
-                embedding_dim=self.embedding_model.dimension,
-                persist_directory=f"{cache_dir}/vector_store"
-            )
-# 
-            OPENAI_API_KEY = st.secrets['OPENAI_API_KEY']
+#                 # cache_dir=cache_dir,
+#                 # memory_cache_size=10000,
+#                 # use_disk_cache=True
+#             )
+# # 
 
 
-            self.hyde = HyDEGenerator()
+#             logger.info("Initializing vector store...")
+# # milvus
+#             # self.vector_store = MilvusVectorStore(
+#             #     collection_name=collection_name,
+#             #     host=host,
+#             #     port=port,
+#             #     embedding_dim=self.embedding_model.dimension
+#             # )
+# # 
 
-            # self.question_generator = QuestionGenerator()
-            # self.question_generator = GPTQuestionGenerator(api_key=os.environ.get('OPENAI_API_KEY'))
-            self.question_generator = GPTQuestionGenerator(api_key=OPENAI_API_KEY)
-
-            self.reranker = ReRanker()
-            self.repacker = Repacker()  # New component
-
-            # self.summarizer = DocumentSummarizer()
-            # self.summarizer = GPTDocumentSummarizer(api_key=os.environ.get('OPENAI_API_KEY'))
-            self.summarizer = GPTDocumentSummarizer(api_key=OPENAI_API_KEY)
-
-            # self.llm_processor = LLMProcessor()  # New component
-
-        except Exception as e:
-            logger.error(f"Pipeline initialization failed: {str(e)}")
-            raise
+# # chromadb
+#             self.vector_store = ChromaDBVectorStore(
+#                 collection_name=collection_name,
+#                 embedding_dim=self.embedding_model.dimension,
+#                 persist_directory=f"{cache_dir}/vector_store"
+#             )
+# # 
+#             OPENAI_API_KEY = st.secrets['OPENAI_API_KEY']
 
 
+#             self.hyde = HyDEGenerator()
+
+#             # self.question_generator = QuestionGenerator()
+#             # self.question_generator = GPTQuestionGenerator(api_key=os.environ.get('OPENAI_API_KEY'))
+#             self.question_generator = GPTQuestionGenerator(api_key=OPENAI_API_KEY)
+
+#             self.reranker = ReRanker()
+#             self.repacker = Repacker()  # New component
+
+#             # self.summarizer = DocumentSummarizer()
+#             # self.summarizer = GPTDocumentSummarizer(api_key=os.environ.get('OPENAI_API_KEY'))
+#             self.summarizer = GPTDocumentSummarizer(api_key=OPENAI_API_KEY)
+
+#             # self.llm_processor = LLMProcessor()  # New component
+
+#         except Exception as e:
+#             logger.error(f"Pipeline initialization failed: {str(e)}")
+#             raise
+
+    def __init__(
+            self,
+            collection_name: str = "azerbaijan_docs",
+            chunk_size: int = 512,
+            chunk_overlap: int = 50,
+            embedding_model: str = "text-embedding-3-small",
+            host: str = "localhost",
+            port: int = 19530,
+            language: str = "az",
+            device: str = None,
+            batch_size: int = 4,
+            cache_dir: str = "cache"
+        ):
+            try:
+                self.logger = logging.getLogger(__name__)
+                self.logger.info("Initializing RAGPipeline")
+                st.write("Starting RAGPipeline initialization...")
+
+                log_memory_usage("Starting RAGPipeline init")
+    
+                self.batch_size = batch_size
+                self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+                self.language = language
+                self.cache_dir = Path(cache_dir)
+                
+                # Create cache directory
+                self.cache_dir.mkdir(parents=True, exist_ok=True)
+                log_memory_usage("After cache directory setup")
+                self.logger.info(f"Cache directory created at {self.cache_dir}")
+                st.write(f"Cache directory setup completed")
+
+                # Initialize components with status updates
+                st.write("Initializing document processor...")
+                self.doc_processor = DocumentProcessor()
+                log_memory_usage("After document processor init")
+                self.logger.info("Document processor initialized")
+
+                st.write("Initializing chunking strategy...")
+                log_memory_usage("After chunking strategy init")
+                self.chunking_strategy = ChunkingStrategy(
+                    chunk_size=chunk_size,
+                    chunk_overlap=chunk_overlap
+                )
+                log_memory_usage("After chunk cache init")
+                self.logger.info("Chunking strategy initialized")
+
+                st.write("Initializing chunk cache...")
+                self.chunk_cache = ChunkCache(cache_dir=f"{cache_dir}/chunks")
+                self.logger.info("Chunk cache initialized")
+
+                # Initialize embedding model
+                st.write("Initializing embedding model...")
+                self.logger.info("Loading embedding model...")
+                OPENAI_API_KEY = st.secrets['OPENAI_API_KEY']
+                self.embedding_model = GPTEmbeddingModel(
+                    model_name=embedding_model,
+                    device=device,
+                    api_key=OPENAI_API_KEY
+                )
+                log_memory_usage("After embedding model init")
+                self.logger.info("Embedding model initialized")
+                st.write("Embedding model initialized successfully")
+
+                # Initialize vector store
+                st.write("Initializing vector store...")
+                self.logger.info("Setting up vector store...")
+                self.vector_store = ChromaDBVectorStore(
+                    collection_name=collection_name,
+                    embedding_dim=self.embedding_model.dimension,
+                    persist_directory=f"{cache_dir}/vector_store"
+                )
+                log_memory_usage("After vector store init")
+                self.logger.info("Vector store initialized")
+                st.write("Vector store initialized successfully")
+
+                # Initialize other components
+                st.write("Initializing remaining components...")
+                self.hyde = HyDEGenerator()
+                self.question_generator = GPTQuestionGenerator(api_key=OPENAI_API_KEY)
+                self.reranker = ReRanker()
+                self.repacker = Repacker()
+                self.summarizer = GPTDocumentSummarizer(api_key=OPENAI_API_KEY)
+                
+                self.logger.info("All components initialized successfully")
+                st.write("All pipeline components initialized successfully")
+                log_memory_usage("After all components initialization")
+
+            except Exception as e:
+                error_msg = f"Pipeline initialization failed: {str(e)}"
+                self.logger.error(error_msg)
+                st.error(error_msg)
+                raise
+
+        
     def process_document(
         self,
         file_path: str
@@ -4686,37 +4779,122 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def initialize_rag_pipeline():
-    """Initialize RAG pipeline with proper error handling and caching"""
-    try:
-        # Create cache directories if they don't exist
-        cache_dir = Path("cache")
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        for subdir in ["model", "chunks", "embeddings"]:
-            (cache_dir / subdir).mkdir(exist_ok=True)
 
-        # Initialize pipeline with caching enabled
+
+def log_memory_usage(message: str = ""):
+    """Log current memory usage with optional context message"""
+    process = psutil.Process()
+    memory_info = process.memory_info()
+    memory_mb = memory_info.rss / 1024 / 1024
+    
+    # Log to both streamlit and logger
+    log_message = f"Memory usage{f' ({message})' if message else ''}: {memory_mb:.2f} MB"
+    logger.info(log_message)
+    st.write(log_message)
+
+
+
+# def initialize_rag_pipeline():
+#     """Initialize RAG pipeline with proper error handling and caching"""
+#     try:
+#         # Create cache directories if they don't exist
+#         cache_dir = Path("cache")
+#         cache_dir.mkdir(parents=True, exist_ok=True)
+#         for subdir in ["model", "chunks", "embeddings"]:
+#             (cache_dir / subdir).mkdir(exist_ok=True)
+
+#         st.write("Setting up components...")
+
+#         # Initialize pipeline with caching enabled
+#         pipeline = RAGPipeline(
+#             collection_name="azerbaijan_docs",
+#             embedding_model="text-embedding-3-small",  # OpenAI model
+#             chunk_size=1024,
+#             chunk_overlap=128,
+#             language="az",
+#             cache_dir=str(cache_dir),
+#             batch_size=4  # Smaller batch size for smoother operation
+#         )
+        
+#         st.write("Rag pipeline is setuped")
+
+#         # Process initial document (will use cache if available)
+#         doc_result = pipeline.process_document("formatted_combined.pdf")
+#         if doc_result['status'] != 'success':
+#             st.error(f"Error processing document: {doc_result.get('message', 'Unknown error')}")
+#             return None
+            
+#         return pipeline
+        
+#     except Exception as e:
+#         st.error(f"Failed to initialize pipeline: {str(e)}")
+#         return None
+
+def initialize_rag_pipeline():
+    """Initialize RAG pipeline with detailed logging and status updates"""
+    try:
+        # Create cache directories with status updates
+        cache_dir = Path("cache")
+        st.write("Creating cache directories...")
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        for subdir in ["model", "chunks", "embeddings", "vector_store"]:
+            (cache_dir / subdir).mkdir(exist_ok=True)
+            st.write(f"Created cache directory: {subdir}")
+
+        st.write("Initializing pipeline components...")
+        logger.info("Starting pipeline initialization")
+        log_memory_usage("Before initialization")
+
+        # Initialize components with detailed status updates
         pipeline = RAGPipeline(
             collection_name="azerbaijan_docs",
-            embedding_model="text-embedding-3-small",  # OpenAI model
+            embedding_model="text-embedding-3-small",
             chunk_size=1024,
             chunk_overlap=128,
             language="az",
             cache_dir=str(cache_dir),
-            batch_size=4  # Smaller batch size for smoother operation
+            batch_size=4
         )
         
-        # Process initial document (will use cache if available)
-        doc_result = pipeline.process_document("formatted_combined.pdf")
-        if doc_result['status'] != 'success':
-            st.error(f"Error processing document: {doc_result.get('message', 'Unknown error')}")
-            return None
+        log_memory_usage("After creating cache directories")
+        st.write("Pipeline object created successfully")
+        logger.info("Pipeline object initialized")
+
+        # Process initial document with progress updates
+        log_memory_usage("After pipeline initialization")
+        st.write("Processing initial document...")
+        logger.info("Starting document processing")
+        
+        try:
+            doc_result = pipeline.process_document("formatted_combined.pdf")
+            log_memory_usage("After document processing")
+            st.write("Document processing completed")
+            logger.info("Document processing finished")
             
-        return pipeline
+            if doc_result['status'] != 'success':
+                error_msg = f"Error processing document: {doc_result.get('message', 'Unknown error')}"
+                st.error(error_msg)
+                logger.error(error_msg)
+                return None
+                
+            st.success("Pipeline initialization completed successfully!")
+            logger.info("Pipeline fully initialized")
+            log_memory_usage("After complete initialization")
+            return pipeline
+            
+        except Exception as doc_error:
+            error_msg = f"Document processing failed: {str(doc_error)}"
+            st.error(error_msg)
+            logger.error(error_msg)
+            return None
         
     except Exception as e:
-        st.error(f"Failed to initialize pipeline: {str(e)}")
+        error_msg = f"Failed to initialize pipeline: {str(e)}"
+        st.error(error_msg)
+        logger.error(error_msg)
         return None
+
+
 
 def process_query(pipeline, query: str) -> Dict[str, Any]:
     """Process a single query through the pipeline"""
