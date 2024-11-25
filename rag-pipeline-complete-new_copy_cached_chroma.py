@@ -3780,14 +3780,14 @@ class RAGPipeline:
 
             # self.question_generator = QuestionGenerator()
             # self.question_generator = GPTQuestionGenerator(api_key=os.environ.get('OPENAI_API_KEY'))
-            self.question_generator = GPTQuestionGenerator(OPENAI_API_KEY)
+            self.question_generator = GPTQuestionGenerator(api_key=OPENAI_API_KEY)
 
             self.reranker = ReRanker()
             self.repacker = Repacker()  # New component
 
             # self.summarizer = DocumentSummarizer()
             # self.summarizer = GPTDocumentSummarizer(api_key=os.environ.get('OPENAI_API_KEY'))
-            self.summarizer = GPTDocumentSummarizer(OPENAI_API_KEY)
+            self.summarizer = GPTDocumentSummarizer(api_key=OPENAI_API_KEY)
 
             # self.llm_processor = LLMProcessor()  # New component
 
