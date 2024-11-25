@@ -3670,8 +3670,8 @@ class RAGPipeline:
         chunk_size: int = 512, # 1024
         chunk_overlap: int = 50, # 128
         # embedding_model: str = "BAAI/bge-m3", # Local model
-        embedding_model: str = "LocalDoc/TEmA-small", # Local model
-        # embedding_model="text-embedding-3-small",  # OpenAI model
+        # embedding_model: str = "LocalDoc/TEmA-small", # Local model
+        embedding_model="text-embedding-3-small",  # OpenAI model
         host: str = "localhost",
         port: int = 19530,
         language: str = "az",
